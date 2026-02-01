@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+notes/backups/
+*.log
+.DS_Store
+test-*.md
+test-*.json
+test-*.html
+TEST_REPORT.md

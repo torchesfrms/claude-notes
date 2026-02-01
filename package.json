@@ -1,0 +1,28 @@
+{
+  "name": "claude-notes",
+  "version": "1.0.0",
+  "description": "智能笔记系统 - 记录与 Claude 的对话",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "vite",
+    "build": "vite build",
+    "start:production": "npm run build && node server-production.js"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.14.0",
+    "@mui/material": "^5.14.0",
+    "cors": "^2.8.5",
+    "detect-port": "^2.1.0",
+    "dotenv": "^17.2.3",
+    "express": "^4.18.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.0",
+    "vite": "^4.4.0"
+  }
+}
