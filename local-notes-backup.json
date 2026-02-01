@@ -1,0 +1,151 @@
+[
+  {
+    "question": "什么是 CI/CD？",
+    "answer": "CI/CD 是持续集成（Continuous Integration）和持续部署（Continuous Deployment）的缩写。CI 是频繁将代码集成到主分支，CD 是自动化部署到生产环境。",
+    "tags": [
+      "CI/CD",
+      "DevOps",
+      "自动化"
+    ],
+    "timestamp": "2026/02/02 11:30:00"
+  },
+  {
+    "question": "什么是微服务架构？",
+    "answer": "微服务架构是一种将应用拆分为多个小型独立服务的设计模式。每个服务运行在自己的进程中，通过 API 通信。优点是易于扩展、独立部署，缺点是增加了系统复杂度。",
+    "tags": [
+      "微服务",
+      "架构",
+      "后端"
+    ],
+    "timestamp": "2026/02/02 11:00:00"
+  },
+  {
+    "question": "测试问题",
+    "answer": "测试答案",
+    "tags": [
+      "测试"
+    ],
+    "timestamp": "2026/02/02 00:22:19"
+  },
+  {
+    "question": "监听状态（LISTEN）是什么意思？",
+    "answer": "**监听 = 等待客户端连接**\n\n就像电话接线员守在电话旁等待来电，或商店开门营业等待顾客进来。\n\n**监听状态表示：**\n1. ✅ 程序已经启动\n2. ✅ 程序正在某个端口上等待\n3. ✅ 随时准备接受连接请求\n4. ⏰ 持续等待，不会主动关闭\n\n**完整流程：**\n```\n服务器启动 → 绑定端口 → 进入 LISTEN 状态 → 等待连接\n浏览器访问 → 发送连接请求 → 服务器接受 → ESTABLISHED 状态 → 传输数据\n```\n\n**常见的 TCP 连接状态：**\n- **LISTEN** - 等待连接（服务器）\n- **ESTABLISHED** - 已连接，正在通信\n- **TIME_WAIT** - 连接关闭中\n- **CLOSE_WAIT** - 等待关闭\n\n**生活比喻：**\n披萨店开门（启动程序）→ 打开电话线（绑定端口）→ 等待顾客打电话（LISTEN）→ 接到订单（接受连接）→ 制作披萨（处理请求）\n\n**实际例子：**\n```\nnode 18776 ... TCP localhost:3001 (LISTEN)\n```\n表示 Node.js 服务器在 3001 端口监听，等待浏览器访问 http://localhost:3001/\n\n**关键要点：**\n- LISTEN ≠ 正在传输数据（LISTEN = 等待，ESTABLISHED = 通信）\n- 只有服务器才 LISTEN（客户端主动发起连接）\n- 一个端口只能有一个程序 LISTEN（否则端口冲突）\n\n**查看监听状态命令：**\n- `lsof -i | grep LISTEN` - 查看所有监听端口\n- `lsof -i :3001 | grep LISTEN` - 查看特定端口\n- `netstat -an | grep LISTEN` - 另一种查看方式",
+    "tags": [
+      "网络",
+      "TCP",
+      "端口",
+      "服务器",
+      "基础知识"
+    ],
+    "timestamp": "2026/02/01 19:13:16"
+  },
+  {
+    "question": "目录的格式一般是什么样的？",
+    "answer": "**不同操作系统的格式：**\n\n**Unix/Linux/macOS：**\n```\n/Users/moer/claude-notes/notes/notes.md\n```\n- 使用 `/` 作为分隔符\n- 以 `/` 开头表示从根目录开始\n- 区分大小写（`Notes` ≠ `notes`）\n\n**Windows：**\n```\nC:\\Users\\moer\\Documents\\notes.txt\n```\n- 使用 `\\` 作为分隔符\n- 以盘符开头（C:, D:, E: 等）\n- 不区分大小写（`Notes` = `notes`）\n\n**绝对路径 vs 相对路径：**\n\n**绝对路径**（从根目录开始）：\n- macOS/Linux: `/Users/moer/claude-notes/notes.md`\n- Windows: `C:\\Users\\moer\\Documents\\file.txt`\n- 特点：完整路径，无论从哪里执行都指向同一位置\n\n**相对路径**（从当前目录开始）：\n假设当前在 `/Users/moer/claude-notes`：\n- `notes/notes.md` - 当前目录下的 notes 文件夹\n- `./notes/notes.md` - 同上（明确表示当前目录）\n- `../Desktop/file.txt` - 上级目录的 Desktop 文件夹\n- `../../Documents/` - 上两级目录的 Documents\n\n**特殊目录符号：**\n- `/` - 根目录（Unix）或分隔符\n- `~` - 当前用户主目录（`~/Documents` = `/Users/moer/Documents`）\n- `.` - 当前目录\n- `..` - 上级目录（父目录）\n- `-` - 上一个工作目录\n\n**常见错误：**\n- ❌ 混淆斜杠：`/Users\\moer\\notes`\n- ✅ 正确：`/Users/moer/notes`\n- ❌ 路径有空格忘记引号：`cd /Users/moer/My Documents`\n- ✅ 正确：`cd \"/Users/moer/My Documents\"`\n\n**验证路径的技巧：**\n- `ls /path/to/check` - 检查路径是否存在\n- `realpath notes/notes.md` - 显示完整路径\n- `file /path` - 检查是文件还是目录",
+    "tags": [
+      "文件系统",
+      "路径",
+      "Linux",
+      "Windows",
+      "基础知识"
+    ],
+    "timestamp": "2026/02/01 17:28:27"
+  },
+  {
+    "question": "pwd 命令详解",
+    "answer": "**pwd = Print Working Directory（打印工作目录）**\n- Print - 打印/显示\n- Working - 工作/当前\n- Directory - 目录/文件夹\n\n**基本用法：**\n```bash\npwd\n# 输出：/Users/moer/claude-notes\n```\n\n**常用选项：**\n- `pwd -L` （默认）- 显示逻辑路径（包含符号链接）\n- `pwd -P` - 显示物理路径（解析符号链接）\n\n**路径解析：**\n```\n/Users/moer/claude-notes\n│    │    │         │\n│    │    │         └─ 当前目录\n│    │    └─ 你的用户文件夹\n│    └─ 所有用户的根目录\n└─ 系统根目录\n```\n\n**实际应用场景：**\n\n1. **确认位置**\n   ```bash\n   pwd  # 确认我在正确的项目目录\n   ```\n\n2. **在脚本中使用**\n   ```bash\n   CURRENT_DIR=$(pwd)\n   echo \"当前在：$CURRENT_DIR\"\n   ```\n\n3. **复制当前路径**\n   ```bash\n   pwd | pbcopy  # macOS 复制到剪贴板\n   ```\n\n**相关命令对比：**\n- `pwd` - 显示当前目录\n- `ls` - 列出当前目录内容\n- `cd` - 切换目录\n- `dirname` - 获取路径的目录部分\n\n**快捷技巧：**\n- `cd -` - 快速回到刚才的目录\n- `OLD_DIR=$(pwd)` - 保存当前目录到变量\n- `open .` - 在 Finder 中打开当前目录（macOS）",
+    "tags": [
+      "命令行",
+      "pwd",
+      "Linux",
+      "路径",
+      "深度学习"
+    ],
+    "timestamp": "2026/02/01 17:21:47"
+  },
+  {
+    "question": "如何查看当前目录是什么？",
+    "answer": "**最简单的命令：`pwd`**\n\n```bash\npwd\n```\n\n**pwd = Print Working Directory（打印工作目录）**\n\n输出示例：`/Users/moer/claude-notes`\n\n**其他查看目录的方法：**\n\n1. **查看目录内容**\n   ```bash\n   ls\n   ```\n   显示当前目录有哪些文件和文件夹\n\n2. **查看详细信息**\n   ```bash\n   ls -la\n   ```\n   显示文件的详细信息（权限、大小、时间等）\n\n3. **人类可读格式**\n   ```bash\n   ls -lh\n   ```\n   以易读格式显示文件大小（KB、MB等）\n\n**终端提示符提示：**\nMac/Linux 终端提示符通常会显示当前目录名：\n```\nmoer@MacBook claude-notes %\n```\n这里的 `claude-notes` 就是当前目录名！",
+    "tags": [
+      "命令行",
+      "Linux",
+      "终端",
+      "基础命令"
+    ],
+    "timestamp": "2026/02/01 17:18:05"
+  },
+  {
+    "question": "./start.sh 是什么意思？",
+    "answer": "**`./start.sh` = \"运行当前目录下的 start.sh 脚本\"**\n\n**分解说明**：\n- `./` = 当前目录（`.` 表示当前文件夹，`/` 是分隔符）\n- `start.sh` = 脚本文件名（`.sh` 表示 Shell 脚本）\n\n**为什么要加 `./`？**\n- ❌ 直接输入 `start.sh` → 系统提示\"找不到命令\"\n- ✅ 输入 `./start.sh` → 明确告诉系统\"文件在当前目录\"\n\n**类比理解**：\n就像给地址，\"start.sh\" 像说\"王府井\"（位置不明确），而 \"./start.sh\" 像说\"当前文件夹里的 start.sh\"（位置明确）。\n\n**start.sh 做什么**：\n这个脚本自动完成多个操作：\n1. 检查是否安装了依赖\n2. 启动后端服务器（3001端口）\n3. 启动前端界面（3000端口）\n4. 显示访问地址\n\n**相当于把多个命令打包成一键启动！**\n\n**其他相关命令**：\n- `cat start.sh` - 查看脚本内容\n- `chmod +x start.sh` - 给脚本执行权限\n- `Ctrl + C` - 停止运行的脚本",
+    "tags": [
+      "Shell",
+      "命令行",
+      "脚本",
+      "Linux基础"
+    ],
+    "timestamp": "2026/02/01 17:10:47"
+  },
+  {
+    "question": "为什么启动笔记时端口从 3000 变成了 3001？",
+    "answer": "**原因：端口冲突自动切换**\n\n**设计初衷**：\n- 后端服务器：3001 端口\n- 前端界面：3000 端口\n\n**实际情况**：\n启动时 3000 端口已被占用，Vite 显示：`Port 3000 is in use, trying another one...`\n\n**发生了什么**：\n1. 后端先启动占用了 3001\n2. 前端想用 3000，但被其他程序占用\n3. Vite 智能地切换到下一个可用端口 3001\n4. 结果：前端成功运行在 3001 端口\n\n**解决方案**：\n- 方案 1：接受现状，访问 http://localhost:3001/ 即可正常使用\n- 方案 2：停止占用 3000 端口的程序，重新启动服务",
+    "tags": [
+      "前端开发",
+      "端口",
+      "Vite",
+      "问题排查"
+    ],
+    "timestamp": "2026/02/01 17:05:46"
+  },
+  {
+    "question": "什么是期权？",
+    "answer": "**期权就像\"购买的权利\"**，而不是义务。\n\n**生活比喻**：\n您看中一套房子，现在100万。您付5万元，获得\"3个月内以100万购买这套房的权利\"。\n- 3个月后房价涨到120万 → 您行使权利，按100万买入，赚15万（扣除5万成本）\n- 房价跌到80万 → 您放弃购买，只损失5万\n\n**金融中的期权**：\n- **看涨期权（Call）**：买入股票的权利，预期股价上涨时购买\n- **看跌期权（Put）**：卖出股票的权利，预期股价下跌时购买\n\n**关键要素**：\n1. 标的资产 - 股票、商品等\n2. 行权价 - 约定的买卖价格\n3. 到期日 - 权利有效期\n4. 权利金 - 购买期权的费用\n\n**风险提示**：期权买方最多损失权利金，卖方可能面临巨大损失，适合有经验的投资者。",
+    "tags": [
+      "金融",
+      "投资",
+      "期权",
+      "基础知识"
+    ],
+    "timestamp": "2026/02/01 17:00:00"
+  },
+  {
+    "question": "常见的 Zsh 配置文件有哪些？它们的区别是什么？",
+    "answer": "Zsh 有 4 个主要配置文件：\n\n1. .zprofile - 登录时执行一次，用于设置环境变量、启动程序\n2. .zshrc - 每次打开终端都执行，用于设置别名、函数、提示符\n3. .zlogin - 登录后执行，类似 .zprofile\n4. .zlogout - 退出时执行，用于清理工作\n\n大多数情况下，修改 .zprofile 或 .zshrc 就够了！\n\n.zprofile 适合：环境变量、一次性启动设置\n.zshrc 适合：别名、函数、每次都需要的配置",
+    "tags": [
+      "Zsh",
+      "配置文件",
+      "终端",
+      "Shell"
+    ],
+    "timestamp": "2026/02/01 16:43:58"
+  },
+  {
+    "question": "React 中 App.jsx 文件有什么用？",
+    "answer": "App.jsx 是 React 应用的入口文件，负责：1. 启动整个应用 2. 配置主题（颜色、字体）3. 提供全局样式 4. 渲染主要组件。就像房子的地基和框架。",
+    "tags": [
+      "React",
+      "前端开发",
+      "文件结构"
+    ],
+    "timestamp": "2026/02/01 16:28:35"
+  },
+  {
+    "question": "什么是依赖管理？",
+    "answer": "依赖管理是自动帮您下载、安装、更新代码包的系统。就像网购系统，您下单后系统自动送货上门。JavaScript 使用 npm/yarn，Python 使用 pip。",
+    "tags": [
+      "编程基础",
+      "npm",
+      "依赖管理"
+    ],
+    "timestamp": "2026/02/01 16:28:18"
+  },
+  {
+    "question": "如何解决 npm 权限问题？",
+    "answer": "使用 sudo chown -R $(whoami) \"/Users/moer/.npm\" 修复缓存目录权限，然后运行 npm cache clean --force 清理缓存",
+    "tags": [
+      "npm",
+      "权限",
+      "问题解决"
+    ],
+    "timestamp": "2026/02/01 16:24:50"
+  }
+]

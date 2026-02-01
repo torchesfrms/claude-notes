@@ -1,21 +1,19 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
+const { detectPort } = require('detect-port');
 const pool = require('./db');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const DEFAULT_PORT = 3001;
+const PREFERRED_PORT = process.env.PORT || DEFAULT_PORT;
+
+// 内存缓存最近的时间戳，避免重复
+let lastTimestamp = '';
 
 // 中间件
 app.use(cors());
 app.use(express.json());
-
-// 静态文件服务
-app.use(express.static(path.join(__dirname, 'dist')));
-
-// 内存缓存最近的时间戳
-let lastTimestamp = '';
 
 // 初始化数据库表
 async function initDatabase() {
@@ -251,6 +249,7 @@ app.get('/api/notes/:timestamp/related', async (req, res) => {
     const { timestamp } = req.params;
     const decodedTimestamp = decodeURIComponent(timestamp);
 
+    // 获取当前笔记
     const currentResult = await pool.query(
       'SELECT * FROM notes WHERE timestamp = $1',
       [decodedTimestamp]
@@ -267,6 +266,7 @@ app.get('/api/notes/:timestamp/related', async (req, res) => {
       return res.json({ success: true, related: [] });
     }
 
+    // 查找有共同标签的笔记
     const relatedResult = await pool.query(
       `SELECT *,
         (SELECT COUNT(*) FROM unnest(tags) tag WHERE tag = ANY($1)) as common_tag_count
@@ -293,22 +293,20 @@ app.get('/api/notes/:timestamp/related', async (req, res) => {
   }
 });
 
-// 所有其他路由返回前端应用
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
-
 // 启动服务器
-async function startServer() {
+detectPort(PREFERRED_PORT).then(async (availablePort) => {
+  if (availablePort !== PREFERRED_PORT) {
+    console.log(`⚠️  端口 ${PREFERRED_PORT} 被占用，自动切换到 ${availablePort}`);
+  }
+
+  // 初始化数据库
   await initDatabase();
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ 服务器已启动: http://0.0.0.0:${PORT}`);
+  app.listen(availablePort, () => {
+    console.log(`✅ 服务器已启动: http://localhost:${availablePort}`);
     console.log(`📊 数据库: PostgreSQL (云端)`);
   });
-}
-
-startServer().catch(err => {
-  console.error('❌ 启动失败:', err);
+}).catch(err => {
+  console.error('❌ 端口检测失败:', err);
   process.exit(1);
 });
