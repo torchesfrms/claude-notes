@@ -7,15 +7,71 @@ const pool = require('./db');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// 环境配置
+const isProduction = process.env.NODE_ENV === 'production';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'wlcxx';
+
+// 简单的 token 存储（生产环境建议使用 JWT）
+const validTokens = new Set();
+
 // 中间件
 app.use(cors());
 app.use(express.json());
+
+// 权限验证中间件（仅生产环境启用）
+function requireAuth(req, res, next) {
+  if (!isProduction) {
+    // 本地开发环境跳过验证
+    return next();
+  }
+
+  const token = req.headers.authorization?.replace('Bearer ', '');
+
+  if (!token || !validTokens.has(token)) {
+    return res.status(401).json({
+      success: false,
+      error: '需要管理员权限'
+    });
+  }
+
+  next();
+}
 
 // 静态文件服务
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // 内存缓存最近的时间戳
 let lastTimestamp = '';
+
+// 登录接口
+app.post('/api/login', (req, res) => {
+  const { password } = req.body;
+
+  if (password === ADMIN_PASSWORD) {
+    // 生成简单的 token（生产环境建议使用 JWT）
+    const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    validTokens.add(token);
+
+    res.json({
+      success: true,
+      token,
+      message: '登录成功'
+    });
+  } else {
+    res.status(401).json({
+      success: false,
+      error: '密码错误'
+    });
+  }
+});
+
+// 获取环境信息（前端判断是否需要登录）
+app.get('/api/env', (req, res) => {
+  res.json({
+    isProduction,
+    requireAuth: isProduction
+  });
+});
 
 // 初始化数据库表
 async function initDatabase() {
@@ -61,8 +117,8 @@ app.get('/api/notes', async (req, res) => {
   }
 });
 
-// 添加新笔记
-app.post('/api/notes', async (req, res) => {
+// 添加新笔记（需要权限）
+app.post('/api/notes', requireAuth, async (req, res) => {
   try {
     const { question, answer, tags } = req.body;
 
@@ -109,7 +165,8 @@ app.post('/api/notes', async (req, res) => {
 });
 
 // 批量导入笔记
-app.post('/api/notes/import', async (req, res) => {
+// 批量导入笔记（需要权限）
+app.post('/api/notes/import', requireAuth, async (req, res) => {
   try {
     const { notes } = req.body;
 
@@ -178,7 +235,8 @@ app.post('/api/notes/import', async (req, res) => {
 });
 
 // 删除笔记
-app.delete('/api/notes/:timestamp', async (req, res) => {
+// 删除笔记（需要权限）
+app.delete('/api/notes/:timestamp', requireAuth, async (req, res) => {
   try {
     const { timestamp } = req.params;
     const decodedTimestamp = decodeURIComponent(timestamp);
@@ -207,7 +265,8 @@ app.delete('/api/notes/:timestamp', async (req, res) => {
 });
 
 // 编辑笔记
-app.put('/api/notes/:timestamp', async (req, res) => {
+// 编辑笔记（需要权限）
+app.put('/api/notes/:timestamp', requireAuth, async (req, res) => {
   try {
     const { timestamp } = req.params;
     const decodedTimestamp = decodeURIComponent(timestamp);
