@@ -57,9 +57,18 @@ import {
   Close,
   Link as LinkIcon,
   CloudUpload,
+  AdminPanelSettings,
+  VisibilityOutlined,
 } from '@mui/icons-material';
 
 const NotesApp = () => {
+  // 认证状态
+  const [authMode, setAuthMode] = useState('guest'); // 'guest' 或 'admin'
+  const [isProduction, setIsProduction] = useState(false);
+  const [loginDialog, setLoginDialog] = useState(false);
+  const [loginPassword, setLoginPassword] = useState('');
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem('authToken'));
+
   // 深色模式状态（从 localStorage 读取）
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
@@ -141,6 +150,65 @@ const NotesApp = () => {
     fetchNotes();
   }, []);
 
+  // 检查环境和认证状态
+  useEffect(() => {
+    fetch('/api/env')
+      .then(res => res.json())
+      .then(data => {
+        setIsProduction(data.isProduction);
+        if (data.requireAuth && authToken) {
+          setAuthMode('admin');
+        }
+      })
+      .catch(err => console.error('获取环境信息失败:', err));
+  }, []);
+
+  // ========== 认证处理函数 ==========
+  const handleLogin = async () => {
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: loginPassword })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.setItem('authToken', data.token);
+        setAuthToken(data.token);
+        setAuthMode('admin');
+        setLoginDialog(false);
+        setLoginPassword('');
+        setSnackbar({ open: true, message: '登录成功！欢迎管理员', severity: 'success' });
+      } else {
+        setSnackbar({ open: true, message: data.error || '密码错误', severity: 'error' });
+      }
+    } catch (error) {
+      setSnackbar({ open: true, message: '登录失败', severity: 'error' });
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    setAuthToken(null);
+    setAuthMode('guest');
+    setSnackbar({ open: true, message: '已退出管理员模式', severity: 'info' });
+  };
+
+  const handleSwitchToAdmin = () => {
+    if (!isProduction) {
+      setAuthMode('admin');
+      setSnackbar({ open: true, message: '已切换到管理员模式', severity: 'success' });
+    } else {
+      if (authToken) {
+        setAuthMode('admin');
+      } else {
+        setLoginDialog(true);
+      }
+    }
+  };
+
   // 格式化相对时间
   const formatRelativeTime = (timestamp) => {
     // 如果时间戳包含毫秒，提取基础时间
@@ -219,6 +287,7 @@ const NotesApp = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
         },
         body: JSON.stringify({
           question: question.trim(),
@@ -274,7 +343,10 @@ const NotesApp = () => {
     try {
       const encodedTimestamp = encodeURIComponent(note.timestamp);
       const response = await fetch(`/api/notes/${encodedTimestamp}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        }
       });
 
       const data = await response.json();
@@ -390,6 +462,7 @@ const NotesApp = () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
         },
         body: JSON.stringify({
           question: note.question.trim(),
@@ -542,7 +615,10 @@ const NotesApp = () => {
       for (const timestamp of selectedNotes) {
         const encodedTimestamp = encodeURIComponent(timestamp);
         await fetch(`/api/notes/${encodedTimestamp}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: {
+            ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+          }
         });
       }
 
@@ -735,7 +811,10 @@ const NotesApp = () => {
     try {
       const response = await fetch('/api/notes/import', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        },
         body: JSON.stringify({ notes: importDialog.parsedNotes })
       });
 
@@ -886,8 +965,35 @@ const NotesApp = () => {
           {/* 标题 */}
           <Fade in={true} timeout={1000}>
             <Box sx={{ mb: 4, textAlign: 'center', position: 'relative' }}>
-              {/* 深色模式切换 */}
-              <Box sx={{ position: 'absolute', top: 0, right: 0 }}>
+              {/* 顶部操作栏 */}
+              <Box sx={{ position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
+                {/* 模式切换（仅生产环境显示） */}
+                {isProduction && (
+                  <>
+                    <Chip
+                      icon={<VisibilityOutlined />}
+                      label="访客模式"
+                      color={authMode === 'guest' ? 'primary' : 'default'}
+                      onClick={() => setAuthMode('guest')}
+                      variant={authMode === 'guest' ? 'filled' : 'outlined'}
+                      size="small"
+                    />
+                    <Chip
+                      icon={<AdminPanelSettings />}
+                      label="管理员"
+                      color={authMode === 'admin' ? 'error' : 'default'}
+                      onClick={handleSwitchToAdmin}
+                      variant={authMode === 'admin' ? 'filled' : 'outlined'}
+                      size="small"
+                    />
+                    {authMode === 'admin' && authToken && (
+                      <Button size="small" onClick={handleLogout} variant="outlined">
+                        退出
+                      </Button>
+                    )}
+                  </>
+                )}
+                {/* 深色模式切换 */}
                 <IconButton
                   onClick={() => setDarkMode(!darkMode)}
                   color="primary"
@@ -903,11 +1009,19 @@ const NotesApp = () => {
               <Typography variant="body1" color="text.secondary">
                 记录与 Claude 对话中的重点内容
               </Typography>
+
+              {/* 访客模式提示 */}
+              {authMode === 'guest' && isProduction && (
+                <Alert severity="info" sx={{ mt: 2, maxWidth: '600px', mx: 'auto' }}>
+                  当前为<strong>访客模式</strong>，只能查看笔记。切换到管理员模式以编辑内容。
+                </Alert>
+              )}
             </Box>
           </Fade>
 
         <Grid container spacing={3}>
-          {/* 左侧：添加笔记 */}
+          {/* 左侧：添加笔记（仅管理员可见） */}
+          {authMode === 'admin' && (
           <Grid item xs={12} md={5}>
             <Paper sx={{ p: 3, borderRadius: 3, border: '1px solid #e5e7eb' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
@@ -1029,9 +1143,10 @@ const NotesApp = () => {
               </Typography>
             </Paper>
           </Grid>
+          )}
 
           {/* 右侧：笔记列表 */}
-          <Grid item xs={12} md={7}>
+          <Grid item xs={12} md={authMode === 'admin' ? 7 : 12}>
             <Paper sx={{ p: 3, borderRadius: 3, border: '1px solid #e5e7eb', minHeight: 600 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Avatar sx={{ bgcolor: '#f50057', mr: 2 }}>
@@ -1041,7 +1156,8 @@ const NotesApp = () => {
                   笔记列表 ({filteredNotes.length})
                 </Typography>
 
-                {/* 批量模式开关 */}
+                {/* 批量模式开关（仅管理员可见） */}
+                {authMode === 'admin' && (
                 <Button
                   variant={batchMode ? "contained" : "outlined"}
                   size="small"
@@ -1051,8 +1167,11 @@ const NotesApp = () => {
                 >
                   {batchMode ? '退出批量' : '批量模式'}
                 </Button>
+                )}
 
-                {/* 导入按钮 */}
+                {/* 导入按钮（仅管理员可见） */}
+                {authMode === 'admin' && (
+                <>
                 <input
                   accept=".md,.markdown,.json"
                   style={{ display: 'none' }}
@@ -1070,6 +1189,8 @@ const NotesApp = () => {
                     <CloudUpload />
                   </IconButton>
                 </label>
+                </>
+                )}
 
                 <IconButton
                   onClick={handleExportClick}
@@ -1251,6 +1372,8 @@ const NotesApp = () => {
                                 transition: 'opacity 0.2s',
                                 '.MuiCard-root:hover &': { opacity: 1 }
                               }}>
+                                {authMode === 'admin' && (
+                                <>
                                 <IconButton
                                   onClick={() => handleEditClick(note)}
                                   size="small"
@@ -1281,6 +1404,8 @@ const NotesApp = () => {
                                     <Delete fontSize="small" />
                                   )}
                                 </IconButton>
+                                </>
+                                )}
                               </Box>
                             )}
 
@@ -1789,6 +1914,35 @@ const NotesApp = () => {
             💬 慎终如始，行稳致远
           </Typography>
         </Box>
+
+        {/* 登录对话框 */}
+        <Dialog open={loginDialog} onClose={() => setLoginDialog(false)}>
+          <DialogTitle>🔐 管理员登录</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              请输入管理员密码以获取编辑权限
+            </DialogContentText>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="密码"
+              type="password"
+              fullWidth
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleLogin();
+                }
+              }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setLoginDialog(false)}>取消</Button>
+            <Button onClick={handleLogin} variant="contained">登录</Button>
+          </DialogActions>
+        </Dialog>
+
       </Container>
     </Box>
     </ThemeProvider>

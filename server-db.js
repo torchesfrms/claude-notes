@@ -1,19 +1,124 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 const { detectPort } = require('detect-port');
 const pool = require('./db');
 
 const app = express();
 const DEFAULT_PORT = 3001;
 const PREFERRED_PORT = process.env.PORT || DEFAULT_PORT;
+const NOTES_DIR = path.join(__dirname, 'notes');
+const NOTES_FILE = path.join(NOTES_DIR, 'notes.md');
+const BACKUPS_DIR = path.join(NOTES_DIR, 'backups');
+
+// 环境配置
+const isProduction = process.env.NODE_ENV === 'production';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'wlcxx';
+
+// 简单的 token 存储（生产环境建议使用 JWT）
+const validTokens = new Set();
 
 // 内存缓存最近的时间戳，避免重复
 let lastTimestamp = '';
 
+// 确保 notes 目录和文件存在
+if (!fs.existsSync(NOTES_DIR)) {
+  fs.mkdirSync(NOTES_DIR, { recursive: true });
+}
+
+if (!fs.existsSync(BACKUPS_DIR)) {
+  fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+}
+
+if (!fs.existsSync(NOTES_FILE)) {
+  fs.writeFileSync(NOTES_FILE, '# Claude 对话笔记\n\n---\n\n', 'utf-8');
+}
+
+// 同步数据库到本地 notes.md 文件
+async function syncToMarkdown() {
+  try {
+    console.log('🔄 开始同步数据库到 notes.md...');
+    const result = await pool.query(
+      'SELECT * FROM notes ORDER BY created_at ASC'
+    );
+
+    console.log(`📊 查询到 ${result.rows.length} 条笔记`);
+
+    let content = '# Claude 对话笔记\n\n---\n\n';
+
+    result.rows.forEach(note => {
+      content += `## 📝 ${note.question}\n\n`;
+      content += `**时间**: ${note.timestamp}\n\n`;
+
+      if (note.tags && note.tags.length > 0) {
+        content += `**标签**: ${note.tags.map(tag => `\`${tag}\``).join(' ')}\n\n`;
+      }
+
+      content += `### 💡 回答\n\n${note.answer}\n\n`;
+      content += `---\n\n`;
+    });
+
+    fs.writeFileSync(NOTES_FILE, content, 'utf-8');
+    console.log('✅ 已同步数据库到 notes.md');
+  } catch (error) {
+    console.error('❌ 同步到 Markdown 失败:', error);
+  }
+}
+
 // 中间件
 app.use(cors());
 app.use(express.json());
+
+// 权限验证中间件（仅生产环境启用）
+function requireAuth(req, res, next) {
+  if (!isProduction) {
+    // 本地开发环境跳过验证
+    return next();
+  }
+
+  const token = req.headers.authorization?.replace('Bearer ', '');
+
+  if (!token || !validTokens.has(token)) {
+    return res.status(401).json({
+      success: false,
+      error: '需要管理员权限'
+    });
+  }
+
+  next();
+}
+
+// 登录接口
+app.post('/api/login', (req, res) => {
+  const { password } = req.body;
+
+  if (password === ADMIN_PASSWORD) {
+    // 生成简单的 token（生产环境建议使用 JWT）
+    const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    validTokens.add(token);
+
+    res.json({
+      success: true,
+      token,
+      message: '登录成功'
+    });
+  } else {
+    res.status(401).json({
+      success: false,
+      error: '密码错误'
+    });
+  }
+});
+
+// 获取环境信息（前端判断是否需要登录）
+app.get('/api/env', (req, res) => {
+  res.json({
+    isProduction,
+    requireAuth: isProduction
+  });
+});
 
 // 初始化数据库表
 async function initDatabase() {
@@ -59,8 +164,8 @@ app.get('/api/notes', async (req, res) => {
   }
 });
 
-// 添加新笔记
-app.post('/api/notes', async (req, res) => {
+// 添加新笔记（需要权限）
+app.post('/api/notes', requireAuth, async (req, res) => {
   try {
     const { question, answer, tags } = req.body;
 
@@ -90,6 +195,9 @@ app.post('/api/notes', async (req, res) => {
       [question.trim(), answer.trim(), tags || [], finalTimestamp]
     );
 
+    // 同步到本地 Markdown 文件
+    await syncToMarkdown();
+
     res.json({
       success: true,
       message: '笔记已保存',
@@ -106,8 +214,8 @@ app.post('/api/notes', async (req, res) => {
   }
 });
 
-// 批量导入笔记
-app.post('/api/notes/import', async (req, res) => {
+// 批量导入笔记（需要权限）
+app.post('/api/notes/import', requireAuth, async (req, res) => {
   try {
     const { notes } = req.body;
 
@@ -169,14 +277,17 @@ app.post('/api/notes/import', async (req, res) => {
       imported: importedNotes,
       errors: errors.length > 0 ? errors : null
     });
+
+    // 同步到本地 Markdown 文件
+    await syncToMarkdown();
   } catch (error) {
     console.error('批量导入失败:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 删除笔记
-app.delete('/api/notes/:timestamp', async (req, res) => {
+// 删除笔记（需要权限）
+app.delete('/api/notes/:timestamp', requireAuth, async (req, res) => {
   try {
     const { timestamp } = req.params;
     const decodedTimestamp = decodeURIComponent(timestamp);
@@ -193,6 +304,9 @@ app.delete('/api/notes/:timestamp', async (req, res) => {
       });
     }
 
+    // 同步到本地 Markdown 文件
+    await syncToMarkdown();
+
     res.json({
       success: true,
       message: '笔记已删除',
@@ -204,8 +318,8 @@ app.delete('/api/notes/:timestamp', async (req, res) => {
   }
 });
 
-// 编辑笔记
-app.put('/api/notes/:timestamp', async (req, res) => {
+// 编辑笔记（需要权限）
+app.put('/api/notes/:timestamp', requireAuth, async (req, res) => {
   try {
     const { timestamp } = req.params;
     const decodedTimestamp = decodeURIComponent(timestamp);
@@ -226,6 +340,9 @@ app.put('/api/notes/:timestamp', async (req, res) => {
         error: '笔记不存在'
       });
     }
+
+    // 同步到本地 Markdown 文件
+    await syncToMarkdown();
 
     res.json({
       success: true,
@@ -302,9 +419,13 @@ detectPort(PREFERRED_PORT).then(async (availablePort) => {
   // 初始化数据库
   await initDatabase();
 
+  // 启动时同步一次数据库到 Markdown
+  await syncToMarkdown();
+
   app.listen(availablePort, () => {
     console.log(`✅ 服务器已启动: http://localhost:${availablePort}`);
     console.log(`📊 数据库: PostgreSQL (云端)`);
+    console.log(`📁 本地备份: ${NOTES_FILE}`);
   });
 }).catch(err => {
   console.error('❌ 端口检测失败:', err);

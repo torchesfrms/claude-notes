@@ -27,7 +27,7 @@ fi
 # 启动后端服务器
 BACKEND_PORT=${PORT:-3001}
 echo "✅ 启动后端服务器 (端口 ${BACKEND_PORT})..."
-WRITE_PORT_TO_FILE=true node server.js &
+WRITE_PORT_TO_FILE=true node server-db.js &
 SERVER_PID=$!
 
 # 等待服务器启动并获取实际端口
@@ -52,7 +52,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "📝 请在浏览器中查看实际运行的端口地址"
 echo "🔧 后端实际端口: ${ACTUAL_BACKEND_PORT}"
-echo "💾 笔记保存: ./notes/notes.md"
+echo "📊 数据库: PostgreSQL (云端)"
 echo ""
 echo "💡 提示: 如果端口被占用，会自动使用下一个可用端口"
 echo "⏹  按 Ctrl+C 停止服务器"
